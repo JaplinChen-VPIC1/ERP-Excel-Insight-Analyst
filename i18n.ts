@@ -119,7 +119,7 @@ export const translations = {
       radar: '雷達圖'
     },
     // Config
-    sqlConfigTitle: '分析策略管理',
+    configManagerTitle: '分析策略管理',
     tabGroups: '分析群組 (Roles)',
     tabTemplates: 'AI 分析模板',
     add: '新增',
@@ -150,7 +150,13 @@ export const translations = {
     startAnalysis: '開始智能分析',
     reselect: '重新選擇',
     singleFileContext: '單一檔案分析模式：請選擇分析模板',
-    multiFileContext: '多檔案合併模式：請選擇分析群組 (Role)'
+    multiFileContext: '多檔案合併模式：請選擇分析群組 (Role)',
+    // Storage Restore
+    restoreAccess: '恢復權限',
+    accessRestored: '已恢復資料夾存取權限！設定已載入。',
+    permissionDenied: '拒絕存取。無法自動載入設定檔。',
+    linkFolder: '連結同步資料夾',
+    folderSynced: '資料夾已同步'
   },
   'en-US': {
     appTitle: 'Digiwin ERP Excel Insight Analyst',
@@ -269,7 +275,7 @@ export const translations = {
       radar: 'Radar Chart'
     },
     // Config
-    sqlConfigTitle: 'Strategy Configuration',
+    configManagerTitle: 'Strategy Configuration',
     tabGroups: 'Analysis Groups (Roles)',
     tabTemplates: 'AI Templates',
     add: 'Add New',
@@ -300,7 +306,13 @@ export const translations = {
     startAnalysis: 'Start Smart Analysis',
     reselect: 'Reselect',
     singleFileContext: 'Single File Mode: Select Analysis Template',
-    multiFileContext: 'Multi-File Mode: Select Analysis Group (Role)'
+    multiFileContext: 'Multi-File Mode: Select Analysis Group (Role)',
+    // Storage Restore
+    restoreAccess: 'Restore Access',
+    accessRestored: 'Storage access restored! Config loaded.',
+    permissionDenied: 'Access denied. Cannot auto-load config.',
+    linkFolder: 'Link Sync Folder',
+    folderSynced: 'Folder Synced'
   },
   'vi-VN': {
     appTitle: 'Chuyên gia phân tích Excel ERP Digiwin',
@@ -419,7 +431,7 @@ export const translations = {
       radar: 'Biểu đồ radar'
     },
     // Config
-    sqlConfigTitle: 'Quản lý cấu hình',
+    configManagerTitle: 'Quản lý cấu hình',
     tabGroups: 'Nhóm phân tích (Vai trò)',
     tabTemplates: 'Mẫu AI',
     add: 'Thêm mới',
@@ -450,6 +462,12 @@ export const translations = {
     startAnalysis: 'Bắt đầu phân tích thông minh',
     reselect: 'Chọn lại',
     singleFileContext: 'Chế độ một tệp: Chọn Mẫu phân tích',
-    multiFileContext: 'Chế độ nhiều tệp: Chọn Nhóm phân tích (Vai trò)'
+    multiFileContext: 'Chế độ nhiều tệp: Chọn Nhóm phân tích (Vai trò)',
+    // Storage Restore
+    restoreAccess: 'Khôi phục quyền truy cập',
+    accessRestored: 'Quyền truy cập đã được khôi phục! Đã tải cấu hình.',
+    permissionDenied: 'Truy cập bị từ chối.',
+    linkFolder: 'Liên kết thư mục đồng bộ',
+    folderSynced: 'Thư mục đã đồng bộ'
   }
 };

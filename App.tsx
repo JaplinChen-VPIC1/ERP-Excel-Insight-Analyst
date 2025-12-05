@@ -3,14 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { ExcelDataRow, AnalysisResult, AppState, Language, AnalysisGroup, AnalysisTemplate } from './types';
 import { parseMultipleExcelFiles } from './services/excelService';
 import { analyzeDataWithGemini } from './services/geminiService';
-import { configService } from './services/sqlService';
+import { configService } from './services/configService';
 import { fileSystemService } from './services/fileSystemService';
 import { cleanAndEnrichData } from './utils';
 import FileUpload from './components/FileUpload';
 import Dashboard from './components/Dashboard';
 import ChatBot from './components/ChatBot';
-import SqlConfigManager from './components/SqlConfigManager';
-import { Bot, AlertCircle, Globe, Settings, FileSpreadsheet, Play, X, Layers, MessageSquare } from 'lucide-react';
+import ConfigManager from './components/ConfigManager';
+import { Bot, AlertCircle, Globe, Settings, FileSpreadsheet, Play, X, Layers, MessageSquare, Database, AlertTriangle } from 'lucide-react';
 import { translations } from './i18n';
 
 const App: React.FC = () => {
@@ -27,6 +27,10 @@ const App: React.FC = () => {
 
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   
+  // Storage State
+  const [showRestoreStorage, setShowRestoreStorage] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
   // Staging Area
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [selectedContextId, setSelectedContextId] = useState(''); // GroupID or TemplateID
@@ -38,13 +42,58 @@ const App: React.FC = () => {
     document.title = t.appTitle;
   }, [language, t]);
 
+  // Initial Load and Auto-Restore Logic
   useEffect(() => {
-    const initConfig = async () => {
-        await configService.loadAutoConfig();
+    const initApp = async () => {
+        // 1. Try to restore file system handle from IndexedDB
+        const savedHandle = await fileSystemService.getStoredHandle();
+        
+        if (savedHandle) {
+            // Check permission silently
+            const hasPermission = await fileSystemService.verifyPermission(savedHandle, false);
+            
+            fileSystemService.setRootHandle(savedHandle);
+
+            if (hasPermission) {
+                // If permission exists, auto-load immediately
+                await configService.loadAutoConfig();
+            } else {
+                // If permission needed, show Restore button
+                setShowRestoreStorage(true);
+            }
+        } else {
+            // No handle, just try loading from local storage logic (if any)
+            // But configService uses fileSystem primarily for sync
+        }
+        
         refreshConfigs();
     };
-    initConfig();
+    initApp();
   }, []);
+
+  const handleRestoreStorageAccess = async () => {
+      const savedHandle = await fileSystemService.getStoredHandle();
+      if (!savedHandle) return;
+
+      setIsRestoring(true);
+      try {
+          // Request permission with prompt
+          const granted = await fileSystemService.verifyPermission(savedHandle, true);
+          if (granted) {
+              fileSystemService.setRootHandle(savedHandle);
+              await configService.loadAutoConfig();
+              refreshConfigs();
+              setShowRestoreStorage(false);
+              alert(t.accessRestored);
+          } else {
+              alert(t.permissionDenied);
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsRestoring(false);
+      }
+  };
 
   const refreshConfigs = () => {
     setAvailableGroups(configService.getGroups());
@@ -91,7 +140,16 @@ const App: React.FC = () => {
 
   const handleFilesDropped = (files: File[]) => {
       setStagedFiles(files);
-      setSelectedContextId(''); // Reset selection
+      
+      // Smart Default Selection
+      if (files.length === 1 && availableTemplates.length > 0) {
+          setSelectedContextId(availableTemplates[0].id);
+      } else if (files.length > 1 && availableGroups.length > 0) {
+          setSelectedContextId(availableGroups[0].id);
+      } else {
+          setSelectedContextId('');
+      }
+      
       setErrorMessage('');
   };
 
@@ -183,11 +241,24 @@ const App: React.FC = () => {
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {showRestoreStorage && (
+                <button 
+                    onClick={handleRestoreStorageAccess}
+                    disabled={isRestoring}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-sm hover:bg-amber-100 transition-colors animate-pulse"
+                    title="Click to restore access to your Config Folder"
+                >
+                    <Database className="w-4 h-4" />
+                    {isRestoring ? 'Restoring...' : t.restoreAccess}
+                    <AlertTriangle className="w-4 h-4" />
+                </button>
+            )}
+
             <button 
               onClick={() => setIsConfigOpen(true)}
               className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors flex items-center gap-2"
-              title={t.sqlConfigTitle}
+              title={t.configManagerTitle}
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -284,7 +355,7 @@ const App: React.FC = () => {
                                   onChange={(e) => setSelectedContextId(e.target.value)}
                                   className="w-full p-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                                >
-                                  <option value="">{t.defaultAnalysis} (General)</option>
+                                  <option value="">{t.defaultAnalysis}</option>
                                   {availableGroups.map(g => (
                                     <option key={g.id} value={g.id}>{g.name}</option>
                                   ))}
@@ -296,7 +367,7 @@ const App: React.FC = () => {
                                   onChange={(e) => setSelectedContextId(e.target.value)}
                                   className="w-full p-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                >
-                                  <option value="">{t.defaultAnalysis} (General)</option>
+                                  <option value="">{t.defaultAnalysis}</option>
                                   {availableTemplates.map(tmpl => (
                                     <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
                                   ))}
@@ -366,7 +437,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <SqlConfigManager 
+      <ConfigManager 
          isOpen={isConfigOpen} 
          onClose={() => setIsConfigOpen(false)} 
          language={language} 
