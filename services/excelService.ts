@@ -14,7 +14,8 @@ export const parseExcelFile = async (file: File): Promise<ExcelDataRow[]> => {
           return;
         }
 
-        const workbook = XLSX.read(data, { type: 'binary' });
+        // Use 'array' type for ArrayBuffer, which is more robust than binary strings
+        const workbook = XLSX.read(data, { type: 'array' });
         
         if (workbook.SheetNames.length === 0) {
             reject(new Error("Excel file has no sheets"));
@@ -103,7 +104,8 @@ export const parseExcelFile = async (file: File): Promise<ExcelDataRow[]> => {
       reject(err);
     };
 
-    reader.readAsBinaryString(file);
+    // Use readAsArrayBuffer instead of readAsBinaryString
+    reader.readAsArrayBuffer(file);
   });
 };
 

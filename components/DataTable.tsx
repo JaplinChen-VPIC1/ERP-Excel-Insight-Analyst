@@ -330,33 +330,51 @@ const DataTable: React.FC<DataTableProps> = ({ data, language, itemsPerPage = 10
   };
 
   const renderValueInput = () => {
-    if (!newFilterCol) return <input disabled className="w-full px-3 py-2 bg-gray-100 border rounded-lg text-sm" placeholder={t.selectColumn} />;
+    // 1. Disabled (No column selected)
+    if (!newFilterCol) {
+        return <input disabled className="w-full px-3 py-2 bg-gray-100 border rounded-lg text-sm cursor-not-allowed" placeholder={t.selectColumn} />;
+    }
     
     const type = columnTypes[newFilterCol];
     const uniqueVals = getUniqueValues(newFilterCol);
     const isLowCardinality = uniqueVals.length > 0 && uniqueVals.length < 50;
+    
+    // Shared classes: White background, Dark text, Border, Rounded
+    const inputClass = "w-full px-3 py-2 border rounded-lg text-sm bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all";
 
+    // 2. Date Range
     if (type === 'date' && newFilterOp === 'between') {
        return (
          <div className="flex gap-2">
-           <input type="date" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" />
-           <span className="self-center">-</span>
-           <input type="date" value={newFilterVal2} onChange={e => setNewFilterVal2(e.target.value)} className="w-full px-2 py-2 border rounded-lg text-sm" />
+           <input type="date" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} className={inputClass} />
+           <span className="self-center text-gray-400">-</span>
+           <input type="date" value={newFilterVal2} onChange={e => setNewFilterVal2(e.target.value)} className={inputClass} />
          </div>
        );
     }
-    if (type === 'date') return <input type="date" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" />;
     
+    // 3. Single Date
+    if (type === 'date') {
+        return <input type="date" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} className={inputClass} />;
+    }
+    
+    // 4. Dropdown (Low Cardinality)
     if (isLowCardinality) {
        return (
-         <select value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
+         <select value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} className={inputClass}>
            <option value="">{t.selectCondition}</option>
            {uniqueVals.map(v => <option key={v} value={v}>{v}</option>)}
          </select>
        );
     }
-    if (type === 'number') return <input type="number" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} placeholder={t.inputNumber} className="w-full px-3 py-2 border rounded-lg text-sm" />;
-    return <input type="text" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} placeholder={t.inputKeyword} className="w-full px-3 py-2 border rounded-lg text-sm" />;
+
+    // 5. Number
+    if (type === 'number') {
+        return <input type="number" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} placeholder={t.inputNumber} className={inputClass} />;
+    }
+
+    // 6. Text (Default)
+    return <input type="text" value={newFilterVal} onChange={e => setNewFilterVal(e.target.value)} placeholder={t.inputKeyword} className={inputClass} />;
   };
 
   if (data.length === 0) return (
@@ -423,7 +441,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, language, itemsPerPage = 10
                     <div className="flex-1 w-full md:w-auto">
                         <label className="text-xs font-bold text-gray-500 mb-1 block">{t.column}</label>
                         <div className="relative">
-                            <select value={newFilterCol} onChange={(e) => { setNewFilterCol(e.target.value); setNewFilterVal(''); }} className="w-full pl-3 pr-8 py-2 border rounded-lg text-sm bg-white appearance-none">
+                            <select value={newFilterCol} onChange={(e) => { setNewFilterCol(e.target.value); setNewFilterVal(''); }} className="w-full pl-3 pr-8 py-2 border rounded-lg text-sm bg-white text-gray-900 appearance-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">{t.selectColumn}</option>
                                 {columns.map(col => <option key={col} value={col}>{col}</option>)}
                             </select>
@@ -433,7 +451,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, language, itemsPerPage = 10
                     <div className="flex-1 w-full md:w-auto">
                         <label className="text-xs font-bold text-gray-500 mb-1 block">{t.condition}</label>
                         <div className="relative">
-                            <select value={newFilterOp} onChange={(e) => setNewFilterOp(e.target.value as any)} className="w-full pl-3 pr-8 py-2 border rounded-lg text-sm bg-white appearance-none">
+                            <select value={newFilterOp} onChange={(e) => setNewFilterOp(e.target.value as any)} className="w-full pl-3 pr-8 py-2 border rounded-lg text-sm bg-white text-gray-900 appearance-none focus:ring-2 focus:ring-blue-500">
                             {newFilterCol && columnTypes[newFilterCol] === 'number' ? (
                                 <>
                                     <option value="eq">{t.ops.eq}</option>

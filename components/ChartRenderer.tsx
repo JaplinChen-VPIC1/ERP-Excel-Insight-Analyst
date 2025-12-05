@@ -150,21 +150,51 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, index, onDa
     );
   };
 
+  // --- Logic for Tooltip Labeling and Formatting ---
+  const isPercentageColumn = (key: string) => {
+    const k = key.toLowerCase();
+    return k.includes('rate') || k.includes('percent') || k.includes('avg') || k.includes('yield') || k.includes('率') || k.includes('比') || k.includes('達成');
+  };
+
+  const isCountColumn = (key: string) => {
+    const k = key.toLowerCase();
+    return k.includes('id') || k.includes('no') || k.includes('code') || k.includes('號') || k.includes('單') || k.includes('代碼');
+  };
+
   // Custom Tooltip Component
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white/95 backdrop-blur-sm p-3 border border-gray-100 shadow-xl rounded-xl text-sm min-w-[150px]">
           <p className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label}</p>
-          {payload.map((entry: any, i: number) => (
-            <div key={i} className="flex items-center justify-between gap-4 text-gray-600">
-               <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                 <span>{entry.name || config.dataKey}</span>
-               </div>
-               <span className="font-mono font-bold text-gray-900">{formatNumber(entry.value)}</span>
-            </div>
-          ))}
+          {payload.map((entry: any, i: number) => {
+            // Determine Label
+            let displayName = entry.name || config.dataKey;
+            // If it's a count column (like 'Order No'), visually append (Count) or (數量)
+            if (isCountColumn(displayName)) {
+                displayName = language === 'zh-TW' ? `${displayName} (數量)` : `${displayName} (Count)`;
+            }
+
+            // Determine Value Format
+            let displayValue = formatNumber(entry.value);
+            // If it's a percentage column, format as %
+            if (isPercentageColumn(config.dataKey)) {
+                const num = Number(entry.value);
+                if (!isNaN(num)) {
+                    displayValue = `${(num * 100).toFixed(2)}%`;
+                }
+            }
+
+            return (
+              <div key={i} className="flex items-center justify-between gap-4 text-gray-600">
+                 <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                   <span>{displayName}</span>
+                 </div>
+                 <span className="font-mono font-bold text-gray-900">{displayValue}</span>
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -211,7 +241,13 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, index, onDa
     };
 
     const YAxisProps = {
-       tickFormatter: formatCompactNumber,
+       tickFormatter: (val: any) => {
+           // Percentage Axis Scaling
+           if (isPercentageColumn(config.dataKey)) {
+               return `${(Number(val) * 100).toFixed(0)}%`;
+           }
+           return formatCompactNumber(val);
+       },
        tick: { fontSize: 11, fill: '#64748b' },
        width: 45,
        axisLine: false,
@@ -228,7 +264,12 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ config, data, index, onDa
     const LabelProps = {
       position: "top" as const, 
       offset: 10, 
-      formatter: formatCompactNumber, 
+      formatter: (val: any) => {
+           if (isPercentageColumn(config.dataKey)) {
+               return `${(Number(val) * 100).toFixed(1)}%`;
+           }
+           return formatCompactNumber(val);
+      }, 
       style: { fontSize: 10, fill: '#64748b' }
     };
 

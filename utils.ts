@@ -149,6 +149,9 @@ export const cleanAndEnrichData = (data: ExcelDataRow[]): ExcelDataRow[] => {
   
   // Detect date columns
   const dateCols = headers.filter(h => detectColumnType(data, h) === 'date' || h.includes('日') || h.includes('Date'));
+  
+  // Specific columns for relative fixing
+  const docDateCol = headers.find(h => h.includes('單據日期') || h.includes('DocDate') || h.includes('OrderDate') || h.includes('開工日') || h.includes('開單日'));
 
   // Detect Difference Columns (e.g. 差異天數)
   const diffCol = headers.find(h => h.includes('差異') || h.includes('Diff'));
@@ -160,30 +163,71 @@ export const cleanAndEnrichData = (data: ExcelDataRow[]): ExcelDataRow[] => {
   return data.map(row => {
     const newRow = { ...row };
     let rowChanged = false;
+    let validDocYear = '';
+
+    // If we have a document date column, extract a valid year from it first
+    if (docDateCol) {
+        const val = String(newRow[docDateCol] || '').trim();
+        if (val.length === 8 && val.startsWith('20')) {
+            validDocYear = val.substring(0, 4);
+        } else if (val.includes('/') || val.includes('-')) {
+             const parts = val.split(/[-/]/);
+             if (parts[0].length === 4 && parts[0].startsWith('20')) {
+                 validDocYear = parts[0];
+             }
+        }
+    }
 
     // 1. Fix Dates
     dateCols.forEach(col => {
       let val = String(newRow[col] || '').trim();
       if (!val) return;
 
-      // Fix 0025 -> 2025 (8 digit)
+      // Logic A: Fix 0025 -> 2025 (8 digit)
       if (val.length === 8 && (val.startsWith('00') || val.startsWith('02'))) {
          const yearPrefix = val.substring(0, 2);
          if (yearPrefix === '00' || yearPrefix === '02') {
-             // Assume 20xx
-             const fixedVal = '20' + val.substring(2);
-             newRow[col] = fixedVal;
+             // If we have a valid doc year, prefer that for correction (e.g. 0202 -> 2025)
+             if (validDocYear) {
+                 newRow[col] = validDocYear + val.substring(4);
+             } else {
+                 // Fallback: Assume 20xx
+                 newRow[col] = '20' + val.substring(2);
+             }
              rowChanged = true;
          }
       }
-      // Fix 0025/MM/DD or similar formats
+      // Logic B: Fix 0025/MM/DD or 0202/MM/DD formats
       else if ((val.startsWith('00') || val.startsWith('02')) && (val.includes('/') || val.includes('-'))) {
          const parts = val.split(/[-/]/);
-         if (parts[0].length === 4 && (parts[0].startsWith('00') || parts[0].startsWith('02'))) {
-             parts[0] = '20' + parts[0].substring(2);
+         const yearPart = parts[0];
+         
+         if (yearPart.length === 4 && (yearPart.startsWith('00') || yearPart.startsWith('02'))) {
+             if (validDocYear) {
+                 parts[0] = validDocYear;
+             } else {
+                 parts[0] = '20' + yearPart.substring(2);
+             }
              newRow[col] = parts.join('/');
              rowChanged = true;
          }
+      }
+      // Logic C: Planned < Doc Date fix (if column is likely planned date)
+      else if (docDateCol && col === plannedCol && validDocYear) {
+           const pDate = parseDateSafe(val);
+           const dDate = parseDateSafe(String(newRow[docDateCol]));
+           
+           // If planned date is earlier than doc date (and significant difference > 60 days, implying year error)
+           // We assume year typo
+           if (pDate > 0 && dDate > 0 && pDate < dDate) {
+               // Reconstruct date with doc year
+               // This handles 2023/12/31 vs 2024/01/01 typo cases
+               // We format it back to YYYY/MM/DD
+               const pObj = new Date(pDate);
+               const newDateStr = `${validDocYear}/${String(pObj.getMonth()+1).padStart(2,'0')}/${String(pObj.getDate()).padStart(2,'0')}`;
+               newRow[col] = newDateStr;
+               rowChanged = true;
+           }
       }
     });
 
